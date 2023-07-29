@@ -7,7 +7,6 @@
   import { encode as encode8 } from "@stablelib/base64";
   import { encode as encodev } from "utf8";
   import { Principal } from "@dfinity/principal";
-  import { AccountIdentifier } from "@dfinity/nns";
   import { accountIdentifierFromBytes, principalToAccountDefaultIdentifier } from "../utils/helpers";
 
   let uid = "00000000000000";

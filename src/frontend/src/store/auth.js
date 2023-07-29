@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import { idlFactory } from "../../../declarations/SDM/SDM.did.js";
+import { idlFactory } from "../../../declarations/SDM/service.did.js";
 import { Actor, HttpAgent } from "@dfinity/agent";
 
 /**
@@ -46,7 +46,6 @@ export function createActor(options) {
 }
 
 export const auth = writable({
-  loggedIn: false,
   actor: createActor()
 });
 
@@ -55,16 +54,11 @@ export const adminStatus = writable(false);
 export const scanCredentials = writable({
   uid: "",
   ctr: 0,
-  cmac: "",
-  transfer_code: ""
+  cmac: ""
 });
 
 export const tag = writable({
   valid: false,
-  owner: false,
-  owner_changed: false,
-  locked: true,
-  integrations: [],
   scans_left: 0,
   years_left: 0
 });

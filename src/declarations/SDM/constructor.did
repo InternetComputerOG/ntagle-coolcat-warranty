@@ -87,6 +87,24 @@ type Scan =
    transfer_code: AESKey;
    uid: TagUid;
  };
+type SDM = 
+ service {
+   importCMACs: (TagUid, vec Hex) -> (ImportCMACResult);
+   integratorRegistry: () -> (vec record {
+                                    principal;
+                                    Integrator;
+                                  });
+   isAdmin: () -> (bool);
+   newIntegration: (NewIntegrationRequest) -> (NewIntegrationResult);
+   registerIntegrator: (NewIntegrator) -> () oneway;
+   registerTag: (TagUid) -> (TagEncodeResult);
+   requestAccess: (AccessRequest) -> (AccessResult);
+   scan: (Scan) -> (ScanResult);
+   tagInfo: (TagIdentifier) -> (TagInfoResult);
+   testHash: (text) -> (Hex);
+   unlock: (TagUid) -> (UnlockResult);
+   validateAccess: (ValidationRequest) -> (ValidationResult);
+ };
 type NewIntegrator = 
  record {
    description: text;
@@ -166,20 +184,4 @@ type AccessError =
    SaltNotFound;
  };
 type AESKey = text;
-service : {
-  importCMACs: (TagUid, vec Hex) -> (ImportCMACResult);
-  integratorRegistry: () -> (vec record {
-                                   principal;
-                                   Integrator;
-                                 });
-  isAdmin: () -> (bool);
-  newIntegration: (NewIntegrationRequest) -> (NewIntegrationResult);
-  registerIntegrator: (NewIntegrator) -> () oneway;
-  registerTag: (TagUid) -> (TagEncodeResult);
-  requestAccess: (AccessRequest) -> (AccessResult);
-  scan: (Scan) -> (ScanResult);
-  tagInfo: (TagIdentifier) -> (TagInfoResult);
-  testHash: (text) -> (Hex);
-  unlock: (TagUid) -> (UnlockResult);
-  validateAccess: (ValidationRequest) -> (ValidationResult);
-}
+service : () -> SDM

@@ -32,75 +32,58 @@ shared actor class SDM() = this {
 
   //  ----------- Variables
   private stable var tag_total : Nat32 = 0;
-  private stable var tagIntegration_total : Nat = 0;
   let internet_identity_principal_isaac : Principal = Principal.fromText("gvi7s-tbk2k-4qba4-mw6qj-azomr-rrwex-byyqb-icyrn-eygs4-nrmm5-eae");
   var admins : [Principal] = [internet_identity_principal_isaac]; 
 
   //  ----------- State
   private stable var tagsEntries : [(T.TagUid, T.Tag)] = [];
-  private stable var integratorsEntries : [(Principal, T.Integrator)] = [];
-  private stable var integrationsEntries : [(T.TagIdentifier, T.Integration)] = [];
   private stable var validationsEntries : [(T.ValidationIdentifier, T.TagIdentifier)] = [];
 
   private let tags : TrieMap.TrieMap<T.TagUid, T.Tag> = TrieMap.fromEntries<T.TagUid, T.Tag>(tagsEntries.vals(), Text.equal, Text.hash);
-  private let integrators : TrieMap.TrieMap<Principal, T.Integrator> = TrieMap.fromEntries<Principal, T.Integrator>(integratorsEntries.vals(), Principal.equal, Principal.hash);
-  private let integrations : TrieMap.TrieMap<T.TagIdentifier, T.Integration> = TrieMap.fromEntries<T.TagIdentifier, T.Integration>(integrationsEntries.vals(), Text.equal, Text.hash);
   private let validations : TrieMap.TrieMap<T.ValidationIdentifier, T.TagIdentifier> = TrieMap.fromEntries<T.ValidationIdentifier, T.TagIdentifier>(validationsEntries.vals(), Text.equal, Text.hash);
 
   //  ----------- Configure external actors
 
 
   //  ----------- Public functions
-  //  Integrator Registry
-  public func integratorRegistry() : async [(Principal, T.Integrator)] {
-    Iter.toArray(integrators.entries());
-  };
 
   //  Encoding
-  public shared({ caller }) func registerTag(uid : T.TagUid) : async T.TagEncodeResult {
-    assert _isAdmin(caller);
-    assert not _tag_exists(uid);
-
-    await _registerTag(caller, uid);
-  };
-
-  public shared({ caller }) func importCMACs(
+  public shared({ caller }) func registerTag(
     uid : T.TagUid, 
     data : [Hex.Hex]
-    ) : async T.ImportCMACResult {
-      assert _isAdmin(caller);
+    ) : async T.TagEncodeResult {
+      // assert _isAdmin(caller);
+      assert not _tag_exists(uid);
 
-      _addCMACs(uid, data);
+      await _registerTag(caller, uid, data);
   };
 
-  public shared func testHash(s : Text) : async Hex.Hex {
-    return Helpers.hashSecret(s);
-  };
+  // public shared({ caller }) func importCMACs(
+  //   uid : T.TagUid, 
+  //   data : [Hex.Hex]
+  //   ) : async T.ImportCMACResult {
+  //     // assert _isAdmin(caller);
 
-  public shared({ caller }) func isAdmin() : async Bool {
-    _isAdmin(caller);
-  };
+  //     _addCMACs(uid, data);
+  // };
+
+  // public shared({ caller }) func isAdmin() : async Bool {
+  //   _isAdmin(caller);
+  // };
 
   //  Scan
-  public shared({ caller }) func scan(scan : T.Scan) : async T.ScanResult {
-    assert not _isCanister(caller);
-    _scan(caller, scan);
+  public shared func scan(scan : T.Scan) : async T.ScanResult {
+    // assert not _isCanister(caller);
+    _scan(scan);
   };
 
   //  Access integration
-  public shared({ caller }) func requestAccess(request : T.AccessRequest) : async T.AccessResult {
-    assert not _isCanister(caller);
-    assert _isOwner(caller, request.uid);
+  // public shared({ caller }) func requestAccess(request : T.AccessRequest) : async T.AccessResult {
+  //   assert not _isCanister(caller);
+  //   assert _isOwner(caller, request.uid);
 
-    await _generateAccessCode(request);
-  };
-
-  //  Integrators
-  public shared({ caller }) func registerIntegrator(integrator : T.NewIntegrator) {
-    assert _isCanister(caller);
-
-    _addIntegrator(caller, integrator);
-  };
+  //   await _generateAccessCode(request);
+  // };
 
   //  Validation
   public shared({ caller }) func validateAccess(request : T.ValidationRequest) : async T.ValidationResult {
@@ -111,26 +94,10 @@ shared actor class SDM() = this {
   };
 
   //  Tag Info
-  public shared({ caller }) func tagInfo(tagIdentifier : T.TagIdentifier) : async T.TagInfoResult {
+  public shared({ caller }) func tagInfo(uid : T.TagUid) : async T.TagInfoResult {
     assert _isCanister(caller);
 
-    _getTagInfo(caller, tagIdentifier);
-  };
-
-  //  Unlocking
-  public shared({ caller }) func unlock(uid : T.TagUid) : async T.UnlockResult {
-    assert not _isCanister(caller);
-    assert _isOwner(caller, uid);
-
-    await _generateTransferCode(caller, uid);
-  };
-
-  //  Adding New Integration
-  public shared({ caller }) func newIntegration(request : T.NewIntegrationRequest) : async T.NewIntegrationResult {
-      assert not _isCanister(caller);
-      assert _isOwner(caller, request.uid);
-
-      await _addIntegration(request);
+    _getTagInfo(caller, uid);
   };
 
   //  ----------- Directly called private functions

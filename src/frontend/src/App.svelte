@@ -2,7 +2,6 @@
   import Auth from "./components/Auth.svelte";
   import { auth, adminStatus, tag } from "./store/auth";
   import { Router, Route, Link } from "svelte-navigator";
-  import CMAC from "./components/CMAC.svelte";
   import Admin from "./components/Admin.svelte";
   import Home from "./components/Home.svelte";
   import Tag from "./components/Tag.svelte";
@@ -29,10 +28,13 @@
       {/if}
       
     </Route>
-  {#if $adminStatus}
-    <Admin />
-    <!-- <CMAC /> -->
-  {/if}
+
+    <Route path="admin">
+      {#if $adminStatus}
+        <Admin />
+      {/if}
+    </Route>
+
   </main>
 </Router>
 

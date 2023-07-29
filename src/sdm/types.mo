@@ -17,21 +17,8 @@ module {
     index : TagIndex;
     ctr : TagCtr;
     cmacs : [Hex.Hex];
-    owner : Principal;
-    hashed_transfer_code : ?Hex.Hex;
     salt : AESKey;
-    active_integrations : [TagIdentifier];
-    last_ownership_change : Time.Time;
     creation_date : Time.Time;
-  };
-
-  //  Integrators
-  public type Integrator = {
-    name : Text;
-    image : Text;
-    description : Text;
-    url : Text;
-    tags : [TagIdentifier];
   };
 
   //  Integrations 
@@ -39,10 +26,8 @@ module {
     canister : Principal;
     uid : TagUid;
     hashed_access_code : Hex.Hex;
-    user : ?Principal;
     last_access_key_change : Time.Time;
   };
-
   
   //  Redefinitions
   public type TagIndex = Nat32;
@@ -69,7 +54,6 @@ module {
     uid : TagUid;
     ctr : TagCtr;
     cmac : CMAC;
-    transfer_code : AESKey;
   };
 
   public type ScanResult = {
@@ -78,10 +62,8 @@ module {
   };
 
   public type ScanResponse = {
-    owner : Bool;
-    owner_changed : Bool;  //  If the user became the new owner after this scan.
-    locked : Bool;
-    integrations : [IntegrationResult];
+    validation : ValidationIdentifier;
+    access_code : AESKey;
     scans_left : Nat32;
     years_left : Nat;
   };
@@ -95,46 +77,15 @@ module {
   //  Encoding
   public type TagEncodeResult = {
     key: AESKey;
-    transfer_code: AESKey;
   };
 
   public type ImportCMACResult = {
     #Ok;
     #Err;
   };
-
-  //  Access
-  public type AccessRequest = {
-    uid : TagUid;
-    canister : Principal;
-  };
-
-  public type AccessResult = {
-    #Ok : AccessResponse;
-    #Err : AccessError;
-  };
-
-  public type AccessResponse = {
-    validation : ValidationIdentifier;
-    access_code : AESKey;
-  };
-
-  public type AccessError = {
-    #SaltNotFound;  //  Salt not found.
-    #IntegrationNotFound;  //  Tag Identifier not found in Integration list.
-  };
-
-  //  Integrators
-  public type NewIntegrator = {
-    name : Text;
-    image : Text;
-    description : Text;
-    url : Text;
-  };
   
   //  Validation
   public type ValidationRequest = {
-    user : Principal;
     access_code : AESKey;
     validation : ValidationIdentifier;
   };
@@ -146,9 +97,6 @@ module {
 
   public type ValidationResponse = {
     tag : TagIdentifier;
-    current_user : Principal;
-    previous_user : ?Principal;  //  It will only be null if this is a new tag integration.
-    last_ownership_change : Time.Time;  //  Last time the tag changed owners.
     last_access_key_change : Time.Time;
   };
 
@@ -168,8 +116,6 @@ module {
   };
 
   public type TagInfoResponse = {
-    current_user : ?Principal;
-    last_ownership_change : Time.Time;
     last_access_key_change : Time.Time;
   };
 
@@ -179,54 +125,4 @@ module {
     #TagNotFound;  //  Tag Identifier not found in Integration list. 
   };
 
-  //  Unlocking
-  public type UnlockResult = {
-    #Ok : UnlockResponse;
-    #Err : UnlockError;
-  };
-
-  public type UnlockResponse = {
-    transfer_code : AESKey;
-  };
-
-  public type UnlockError = {
-    #TagNotFound;  //  Tag UID not found. 
-  };
-
-  //  Integration
-  public type IntegrationResult = {
-    integrated : Bool;
-    name : Text;
-    image : Text;
-    description : Text;
-    canister : Principal;
-    url : Text;
-  };
-
-  public type NewIntegrationRequest = {
-    uid : TagUid;
-    canister : Principal;
-  };
-
-  public type NewIntegrationResult = {
-    #Ok : NewIntegrationResponse;
-    #Err : NewIntegrationError;
-  };
-
-  public type NewIntegrationResponse = {
-    name : Text;
-    image : Text;
-    description : Text;
-    canister : Principal;
-    url : Text;
-    validation : ValidationIdentifier;
-    access_code : AESKey;
-  };
-
-  public type NewIntegrationError = {
-    #NotCanisterPrincipal;
-    #IntegratorNotFound;
-    #IntegrationAlreadyExists;
-    #TagNotFound;  //  Tag Identifier not found. 
-  };
 }

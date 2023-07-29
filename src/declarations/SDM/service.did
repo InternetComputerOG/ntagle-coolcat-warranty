@@ -1,0 +1,123 @@
+type AESKey = text;
+type AccessError = variant { SaltNotFound; IntegrationNotFound };
+type AccessRequest = record { uid : TagUid; canister : principal };
+type AccessResponse = record {
+  validation : ValidationIdentifier;
+  access_code : AESKey;
+};
+type AccessResult = variant { Ok : AccessResponse; Err : AccessError };
+type CMAC = text;
+type Hex = text;
+type ImportCMACResult = variant { Ok; Err };
+type IntegrationResult = record {
+  url : text;
+  name : text;
+  description : text;
+  canister : principal;
+  image : text;
+  integrated : bool;
+};
+type Integrator = record {
+  url : text;
+  name : text;
+  tags : vec TagIdentifier;
+  description : text;
+  image : text;
+};
+type NewIntegrationError = variant {
+  IntegrationAlreadyExists;
+  TagNotFound;
+  NotCanisterPrincipal;
+  IntegratorNotFound;
+};
+type NewIntegrationRequest = record { uid : TagUid; canister : principal };
+type NewIntegrationResponse = record {
+  url : text;
+  name : text;
+  description : text;
+  canister : principal;
+  image : text;
+  validation : ValidationIdentifier;
+  access_code : AESKey;
+};
+type NewIntegrationResult = variant {
+  Ok : NewIntegrationResponse;
+  Err : NewIntegrationError;
+};
+type NewIntegrator = record {
+  url : text;
+  name : text;
+  description : text;
+  image : text;
+};
+type SDM = service {
+  importCMACs : (TagUid, vec Hex) -> (ImportCMACResult);
+  integratorRegistry : () -> (vec record { principal; Integrator });
+  isAdmin : () -> (bool);
+  newIntegration : (NewIntegrationRequest) -> (NewIntegrationResult);
+  registerIntegrator : (NewIntegrator) -> () oneway;
+  registerTag : (TagUid) -> (TagEncodeResult);
+  requestAccess : (AccessRequest) -> (AccessResult);
+  scan : (Scan) -> (ScanResult);
+  tagInfo : (TagIdentifier) -> (TagInfoResult);
+  testHash : (text) -> (Hex);
+  unlock : (TagUid) -> (UnlockResult);
+  validateAccess : (ValidationRequest) -> (ValidationResult);
+};
+type Scan = record {
+  ctr : TagCtr;
+  uid : TagUid;
+  cmac : CMAC;
+  transfer_code : AESKey;
+};
+type ScanError = variant { TagNotFound; ExpiredCount; InvalidCMAC };
+type ScanResponse = record {
+  owner_changed : bool;
+  integrations : vec IntegrationResult;
+  owner : bool;
+  years_left : nat;
+  locked : bool;
+  scans_left : nat32;
+};
+type ScanResult = variant { Ok : ScanResponse; Err : ScanError };
+type TagCtr = nat32;
+type TagEncodeResult = record { key : AESKey; transfer_code : AESKey };
+type TagIdentifier = text;
+type TagInfoError = variant { IntegrationNotFound; TagNotFound; NotAuthorized };
+type TagInfoResponse = record {
+  last_access_key_change : Time;
+  current_user : opt principal;
+  last_ownership_change : Time;
+};
+type TagInfoResult = variant { Ok : TagInfoResponse; Err : TagInfoError };
+type TagUid = text;
+type Time = int;
+type UnlockError = variant { TagNotFound };
+type UnlockResponse = record { transfer_code : AESKey };
+type UnlockResult = variant { Ok : UnlockResponse; Err : UnlockError };
+type ValidationError = variant {
+  Invalid;
+  IntegrationNotFound;
+  TagNotFound;
+  NotAuthorized;
+  ValidationNotFound;
+  Expired;
+};
+type ValidationIdentifier = text;
+type ValidationRequest = record {
+  user : principal;
+  validation : ValidationIdentifier;
+  access_code : AESKey;
+};
+type ValidationResponse = record {
+  tag : TagIdentifier;
+  last_access_key_change : Time;
+  previous_user : opt principal;
+  current_user : principal;
+  last_ownership_change : Time;
+};
+type ValidationResult = variant {
+  Ok : ValidationResponse;
+  Err : ValidationError;
+};
+service : SDM
