@@ -49,7 +49,7 @@ export const auth = writable({
   actor: createActor()
 });
 
-export const adminStatus = writable(false);
+export const adminStatus = writable(true);
 
 export const scanCredentials = writable({
   uid: "",

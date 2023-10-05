@@ -40,11 +40,6 @@ module {
     return Hex.encode(nat32ToBytes(h));
   };
 
-  public func getValidationIdentifier(tagIdentifier : T.TagIdentifier, canister : Principal) : Hex.Hex {
-    let h = Text.hash(tagIdentifier # Principal.toText(canister));
-    return Hex.encode(nat32ToBytes(h));
-  };
-
   public func isCanisterPrincipal(p : Principal) : Bool {
     let principal_text = Principal.toText(p);
     let correct_length = Text.size(principal_text) == 27;

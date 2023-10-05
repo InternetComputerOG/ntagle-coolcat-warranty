@@ -17,16 +17,8 @@ module {
     index : TagIndex;
     ctr : TagCtr;
     cmacs : [Hex.Hex];
-    salt : AESKey;
     creation_date : Time.Time;
-  };
-
-  //  Integrations 
-  public type Integration = {
-    canister : Principal;
-    uid : TagUid;
-    hashed_access_code : Hex.Hex;
-    last_access_key_change : Time.Time;
+    cooler_id : Text;
   };
   
   //  Redefinitions
@@ -36,17 +28,11 @@ module {
   //  56-byte array as Hex String
   public type TagUid = Hex.Hex;
 
-  //  32-byte array as Hex string.
-  public type TagIdentifier = Hex.Hex;
-
-  //  32-byte array as Hex string.
-  public type ValidationIdentifier = Hex.Hex;
+  //  16-byte array as Hex string.
+  public type CMAC = Hex.Hex;
 
   //  32-byte array as Hex string.
   public type AESKey = Hex.Hex;
-
-  //  16-byte array as Hex string.
-  public type CMAC = Hex.Hex;
 
   //  ----------- Functions
   //  Scanning
@@ -62,16 +48,15 @@ module {
   };
 
   public type ScanResponse = {
-    validation : ValidationIdentifier;
-    access_code : AESKey;
+    cooler_id : Text;
     scans_left : Nat32;
-    years_left : Nat;
+    creation_date : Time.Time;
   };
 
   public type ScanError = {
     #TagNotFound;  //  Tag UID not found.
-    #InvalidCMAC;
-    #ExpiredCount;  //  The scan count was lower than the last valid scan logged by the canister.
+    #InvalidCMAC : Text;
+    #ExpiredCount : Text;  //  The scan count was lower than the last valid scan logged by the canister.
   };
 
   //  Encoding
@@ -79,50 +64,13 @@ module {
     key: AESKey;
   };
 
-  public type ImportCMACResult = {
+  //  Mappings
+  public type ImportMappingsResult = {
     #Ok;
-    #Err;
-  };
-  
-  //  Validation
-  public type ValidationRequest = {
-    access_code : AESKey;
-    validation : ValidationIdentifier;
   };
 
-  public type ValidationResult = {
-    #Ok : ValidationResponse;
-    #Err : ValidationError;
+  public type Mapping = {
+    uid : TagUid;
+    cooler_id : Text;
   };
-
-  public type ValidationResponse = {
-    tag : TagIdentifier;
-    last_access_key_change : Time.Time;
-  };
-
-  public type ValidationError = {
-    #ValidationNotFound;
-    #IntegrationNotFound;
-    #NotAuthorized;  //  Caller canister not authorized. 
-    #TagNotFound;
-    #Invalid;  //  The Access Code was not valid.
-    #Expired; //  The Access Code was more than 10 minutes old.
-  };
-
-  //  Tag Info
-  public type TagInfoResult = {
-    #Ok : TagInfoResponse;
-    #Err : TagInfoError;
-  };
-
-  public type TagInfoResponse = {
-    last_access_key_change : Time.Time;
-  };
-
-  public type TagInfoError = {
-    #IntegrationNotFound;
-    #NotAuthorized;  //  Caller canister not authorized. 
-    #TagNotFound;  //  Tag Identifier not found in Integration list. 
-  };
-
 }

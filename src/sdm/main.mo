@@ -32,15 +32,17 @@ shared actor class SDM() = this {
 
   //  ----------- Variables
   private stable var tag_total : Nat32 = 0;
-  let internet_identity_principal_isaac : Principal = Principal.fromText("gvi7s-tbk2k-4qba4-mw6qj-azomr-rrwex-byyqb-icyrn-eygs4-nrmm5-eae");
-  var admins : [Principal] = [internet_identity_principal_isaac]; 
+  let tag_key : Hex.Hex = "38513c477c59cf1e9181b4a9bb139413";
+  let admins : [Principal] = [
+    
+    //  Isaac's Plug Wallet
+    Principal.fromText("gj3h2-k3kw2-ciszt-6zylp-azl7o-mvg5j-eudtf-fpejf-mx2rd-ifsul-dqe")
+    
+  ];
 
   //  ----------- State
   private stable var tagsEntries : [(T.TagUid, T.Tag)] = [];
-  private stable var validationsEntries : [(T.ValidationIdentifier, T.TagIdentifier)] = [];
-
   private let tags : TrieMap.TrieMap<T.TagUid, T.Tag> = TrieMap.fromEntries<T.TagUid, T.Tag>(tagsEntries.vals(), Text.equal, Text.hash);
-  private let validations : TrieMap.TrieMap<T.ValidationIdentifier, T.TagIdentifier> = TrieMap.fromEntries<T.ValidationIdentifier, T.TagIdentifier>(validationsEntries.vals(), Text.equal, Text.hash);
 
   //  ----------- Configure external actors
 
@@ -55,110 +57,51 @@ shared actor class SDM() = this {
       // assert _isAdmin(caller);
       assert not _tag_exists(uid);
 
-      await _registerTag(caller, uid, data);
+      await _registerTag(uid, data);
   };
 
-  // public shared({ caller }) func importCMACs(
-  //   uid : T.TagUid, 
-  //   data : [Hex.Hex]
-  //   ) : async T.ImportCMACResult {
-  //     // assert _isAdmin(caller);
-
-  //     _addCMACs(uid, data);
-  // };
-
-  // public shared({ caller }) func isAdmin() : async Bool {
-  //   _isAdmin(caller);
-  // };
-
   //  Scan
-  public shared func scan(scan : T.Scan) : async T.ScanResult {
-    // assert not _isCanister(caller);
+  public shared({ caller }) func scan(scan : T.Scan) : async T.ScanResult {
+    // assert _isCanister(caller);
     _scan(scan);
   };
 
-  //  Access integration
-  // public shared({ caller }) func requestAccess(request : T.AccessRequest) : async T.AccessResult {
-  //   assert not _isCanister(caller);
-  //   assert _isOwner(caller, request.uid);
-
-  //   await _generateAccessCode(request);
-  // };
-
-  //  Validation
-  public shared({ caller }) func validateAccess(request : T.ValidationRequest) : async T.ValidationResult {
-    assert _isCanister(caller);
-    assert _isIntegrator(caller);
-
-    _validateAccess(caller, request);
+  //  Mappings
+  public shared({ caller }) func importMappings(data : [Text]) : async T.ImportMappingsResult {
+    // assert _isAdmin(caller);
+    _importMappings(data);
   };
 
   //  Tag Info
-  public shared({ caller }) func tagInfo(uid : T.TagUid) : async T.TagInfoResult {
-    assert _isCanister(caller);
-
-    _getTagInfo(caller, uid);
+  public shared({ caller }) func exportMappings() : async [T.Mapping] {
+    // assert _isAdmin(caller);
+    _exportMappings();
   };
 
   //  ----------- Directly called private functions
 
   //  Encoding
-  private func _registerTag(
-    caller : Principal, 
-    uid : T.TagUid
+  private func _registerTag( 
+    uid : T.TagUid,
+    data : [Hex.Hex]
     ) : async T.TagEncodeResult {
-      let new_transfer_code = await Helpers.generateKey();
-      let new_salt = await Helpers.generateKey();
 
       let new_tag = {
         index = tag_total;
         ctr = 0 : Nat32;
-        cmacs = [];
-        owner = caller;
-        hashed_transfer_code = ?Helpers.hashSecret(new_transfer_code);
-        salt = new_salt;
-        active_integrations = [];
-        last_ownership_change = Time.now();
+        cmacs = data;
         creation_date = Time.now();
+        cooler_id = "Unassigned";
       };
 
       tags.put(uid, new_tag);
       tag_total += 1;
 
       let result = {
-        key = await Helpers.generateKey();
-        transfer_code = new_transfer_code;
+        key = tag_key;
       }; 
 
       return result;
-  };
-
-  private func _addCMACs(
-    uid : T.TagUid, 
-    data : [Hex.Hex]
-    ) : T.ImportCMACResult {
-      switch (tags.get(uid)) {
-        case (?tag) {
-          let new_tag : T.Tag = {
-            index = tag.index;
-            ctr = tag.ctr;
-            cmacs = data;
-            owner = tag.owner;
-            hashed_transfer_code = tag.hashed_transfer_code;
-            salt = tag.salt;
-            active_integrations = tag.active_integrations;
-            last_ownership_change = tag.last_ownership_change;
-            creation_date = tag.creation_date;
-          };
-
-          tags.put(uid, new_tag);
-          return #Ok;
-        };
-
-        case _ {
-          return #Err;
-        };
-      };
   };
 
   private func _isAdmin (p: Principal) : Bool {
@@ -166,53 +109,20 @@ shared actor class SDM() = this {
   };
 
   //  Scan
-  private func _scan(
-    caller : Principal, 
+  private func _scan( 
     scan : T.Scan
     ) : T.ScanResult {
       switch (tags.get(scan.uid)) {
         case (?tag) {
-          var new_owner_principal = tag.owner;  //  The new value for the Principal "owner" value for this tag.
-          var new_owner_bool = false;  //  The new value for the Boolean "owner" value for the response.
-          var new_owner_changed = false;
-          var new_transfer_code = Option.get(tag.hashed_transfer_code, "");
-          var new_last_ownership_change = tag.last_ownership_change;
-          var new_locked = true;
 
           //  Check CMAC
           if (tag.cmacs[Nat32.toNat(scan.ctr)] != scan.cmac) {
-            return #Err(#InvalidCMAC);
+            return #Err(#InvalidCMAC(tag.cooler_id));
           };
 
           //  Check Count
           if (tag.ctr >= scan.ctr) {
-            return #Err(#ExpiredCount);
-          };
-
-          //  Check if already owner
-          if (tag.owner == caller) {
-            new_owner_bool := true;
-          };
-
-          //  Check Transfer Code
-          if (new_transfer_code != "") {
-            let new_transfer_code_hash = Helpers.hashSecret(scan.transfer_code); 
-
-            if (new_transfer_code == new_transfer_code_hash) {
-
-              //  Handle current owner scanning an unlocked tag
-              if (tag.owner == caller) {
-                new_locked := false;
-
-              //  Handle new owner claiming ownership
-              } else {
-                new_owner_principal := caller;
-                new_transfer_code := "";
-                new_last_ownership_change := Time.now();
-                new_owner_bool := true;
-                new_owner_changed := true;
-              };
-            };
+            return #Err(#ExpiredCount(tag.cooler_id));
           };
 
           //  Updating Tag
@@ -220,11 +130,7 @@ shared actor class SDM() = this {
             index = tag.index;
             ctr = scan.ctr;  //  Update count to the most recent scan.
             cmacs = tag.cmacs;
-            owner = new_owner_principal;  //  Update owner.
-            hashed_transfer_code = ?new_transfer_code;  //  Update transfer code
-            salt = tag.salt;
-            active_integrations = tag.active_integrations;
-            last_ownership_change = new_last_ownership_change;  //  Update last ownership change
+            cooler_id = tag.cooler_id;
             creation_date = tag.creation_date;
           };
 
@@ -232,12 +138,9 @@ shared actor class SDM() = this {
 
           //  Preparing Result
           var result : T.ScanResponse = {
-            owner = new_owner_bool;
-            owner_changed = new_owner_changed;
-            locked = new_locked;
-            integrations = _getIntegrationResults(scan.uid, tag.salt, tag.active_integrations);
-            scans_left = 10_000 - scan.ctr;
-            years_left = Helpers.calculateYearsLeft(tag.creation_date);
+            cooler_id = tag.cooler_id;
+            scans_left = 5_000 - scan.ctr;
+            creation_date = tag.creation_date;
           };
 
           return #Ok(result);
@@ -249,347 +152,46 @@ shared actor class SDM() = this {
       };
   };
 
-  //  Access integration
-  private func _generateAccessCode(request : T.AccessRequest) : async T.AccessResult {
-      let new_access_code = await Helpers.generateKey();
+  private func _importMappings(data : [Text]) : T.ImportMappingsResult {
+    for ((uid, tag) in tags.entries()) {
+      var new_cooler_id = "Unassigned";
 
-      switch (tags.get(request.uid)) {
-        case (?tag) {
-          let tag_identifier = Helpers.getTagIdentifier(request.uid, request.canister, tag.salt);
-
-          //  Add Validation
-          let new_validation_identifier = Helpers.getValidationIdentifier(tag_identifier, request.canister);
-          validations.put(new_validation_identifier, tag_identifier);
-
-          switch (integrations.get(tag_identifier)) {
-            case (?integration) {
-              //  Update Integration
-              let new_integration = {
-                canister = integration.canister;
-                uid = integration.uid;
-                hashed_access_code = Helpers.hashSecret(new_access_code);  //  Add new access code
-                user = integration.user;
-                last_access_key_change = Time.now();  //  Update to now
-              };
-
-              integrations.put(tag_identifier, new_integration);
-
-              //  Return result
-              let result = {
-                validation = new_validation_identifier;
-                access_code = new_access_code;
-              };
-
-              return #Ok(result);
-            };
-
-            case _ {
-              return #Err(#IntegrationNotFound);
-            };
-          };
-        };
-
-        case _ {
-          return #Err(#SaltNotFound);
-        };
+      if (data.size() <= Nat32.toNat(tag.index)) {
+        new_cooler_id := data[Nat32.toNat(tag.index)];
       };
+
+      //  Updating Tag
+      let new_tag : T.Tag = {
+        index = tag.index;
+        ctr = tag.ctr;  //  Update count to the most recent scan.
+        cmacs = tag.cmacs;
+        cooler_id = new_cooler_id;
+        creation_date = tag.creation_date;
+      };
+
+      tags.put(uid, new_tag);
+    };
+
+    return #Ok;
   };
 
-  //  Integrators
-  private func _addIntegrator(
-    caller : Principal, 
-    integrator : T.NewIntegrator
-    ) {
-      let new_integrator = {
-        name = integrator.name;
-        image = integrator.image;
-        description = integrator.description;
-        url = integrator.url;
-        tags = [];
+  private func _exportMappings() : [T.Mapping] {
+    var exportData : [var T.Mapping] = Array.init<T.Mapping>(
+      Nat32.toNat(tag_total),
+      {
+        uid = "Undefined";
+        cooler_id = "Undefined";
+      }
+    );
+
+    for ((uid, tag) in tags.entries()) {
+      exportData[Nat32.toNat(tag.index)] := {
+        uid = uid;
+        cooler_id = tag.cooler_id;
       };
+    };
 
-      integrators.put(caller, new_integrator);
-  };
-
-  //  Validation
-  private func _validateAccess(
-    caller : Principal, 
-    request : T.ValidationRequest
-    ) : T.ValidationResult {
-
-      switch (validations.get(request.validation)) {
-        case (?tag_identifier) {
-          
-          // Delete validation entry, they can only ever be use once
-          validations.delete(request.validation);
-
-          switch (integrations.get(tag_identifier)) {
-            case (?integration) {
-              
-              //  Confirm not expired
-              let time_since = Time.now() - integration.last_access_key_change;
-              let ten_minutes = 1_000_000_000 * 60 * 10;
-              if (time_since > ten_minutes) {
-                return #Err(#Expired);
-              };
-
-              //  Confirm access code validity
-              let new_hashed_access_code = Helpers.hashSecret(request.access_code);
-              if (new_hashed_access_code != integration.hashed_access_code) {
-                return #Err(#Invalid);
-              };
-
-              //  Confirm caller is authorized
-              if (integration.canister != caller) {
-                return #Err(#NotAuthorized);
-              };
-
-              //  Get Tag
-              switch (tags.get(integration.uid)) {
-                case (?tag) {
-                  let new_previous_user = integration.user;
-                  let new_last_access_key_change = integration.last_access_key_change;
-
-                  //  Update Integration
-                  let new_integration = {
-                    canister = integration.canister;
-                    uid = integration.uid;
-                    hashed_access_code = integration.hashed_access_code;
-                    user = ?request.user;  //  Update to include current user.
-                    last_access_key_change = integration.last_access_key_change;
-                  };
-
-                  integrations.put(tag_identifier, new_integration);
-
-                  //  Prepare Result
-                  let result = {
-                    tag = tag_identifier;
-                    current_user = request.user;
-                    previous_user = new_previous_user;
-                    last_ownership_change = tag.last_ownership_change;
-                    last_access_key_change = new_last_access_key_change;
-                  };
-
-                  return #Ok(result);
-                };
-
-                case _ {
-                  return #Err(#TagNotFound);
-                };
-              };
-            };
-
-            case _ {
-              return #Err(#IntegrationNotFound);
-            };
-          };
-        };
-
-        case _ {
-          return #Err(#ValidationNotFound);
-        };
-      };
-  };
-
-  //  Tag Info
-  private func _getTagInfo(
-    caller : Principal, 
-    tagIdentifier : T.TagIdentifier
-    ) : T.TagInfoResult {
-      switch (integrations.get(tagIdentifier)) {
-        case (?integration) {
-
-          //  Confirm canister is authorized
-          if (caller != integration.canister) {
-            return #Err(#NotAuthorized);
-          };
-          
-          //  Get Tag
-          switch (tags.get(integration.uid)) {
-            case (?tag) {
-              
-              //  Prepare Result
-              let result = {
-                current_user = integration.user;
-                last_ownership_change = tag.last_ownership_change;
-                last_access_key_change = integration.last_access_key_change;
-              };
-
-              return #Ok(result);
-            };
-
-            case _ {
-              return #Err(#TagNotFound);
-            };
-          };
-        };
-
-        case _ {
-          return #Err(#IntegrationNotFound);
-        };
-      };
-  };
-  
-  //  Unlocking
-  private func _generateTransferCode(
-    caller : Principal, 
-    uid : T.TagUid
-    ) : async T.UnlockResult {
-    
-      switch (tags.get(uid)) {
-        case (?tag) {
-          let new_transfer_code = await Helpers.generateKey();
-
-          let new_tag = {
-            index = tag.index;
-            ctr = tag.ctr;
-            cmacs = tag.cmacs;
-            owner = tag.owner;
-            hashed_transfer_code = ?Helpers.hashSecret(new_transfer_code);
-            salt = tag.salt;
-            active_integrations = tag.active_integrations;
-            last_ownership_change = tag.last_ownership_change;
-            creation_date = tag.creation_date;
-          };
-
-          tags.put(uid, new_tag);
-
-          let result = {
-            transfer_code = new_transfer_code;
-          }; 
-
-          return #Ok(result);
-        };
-
-        case _ {
-          #Err(#TagNotFound);
-        };
-      };
-  };
-
-  //  Adding New Integration
-  private func _addIntegration(request : T.NewIntegrationRequest) : async T.NewIntegrationResult {
-      if (not _isCanister(request.canister)) {
-        return #Err(#NotCanisterPrincipal);
-      };
-
-      switch (integrators.get(request.canister)) {
-        case (?integrator) {
-
-          switch (tags.get(request.uid)) {
-            case (?tag) {
-              let tag_identifier = Helpers.getTagIdentifier(request.uid, request.canister, tag.salt);
-
-              switch (integrations.get(tag_identifier)) {
-                case (?integration) {
-                  return #Err(#IntegrationAlreadyExists);
-                };
-
-                case _ {
-
-                  //  Update Tag
-                  let new_tag = {
-                    index = tag.index;
-                    ctr = tag.ctr;
-                    cmacs = tag.cmacs;
-                    owner = tag.owner;
-                    hashed_transfer_code = tag.hashed_transfer_code;
-                    salt = tag.salt;
-                    active_integrations = Array.append(tag.active_integrations, [tag_identifier]);  //  Add new tag identifier
-                    last_ownership_change = tag.last_ownership_change;
-                    creation_date = tag.creation_date;
-                  };
-
-                  tags.put(request.uid, new_tag);
-
-                  //  Update Integrator
-                  let new_integrator = {
-                    name = integrator.name;
-                    image = integrator.image;
-                    description = integrator.description;
-                    url = integrator.url;
-                    tags = Array.append(integrator.tags, [tag_identifier]);  //  Add new tag identifier
-                  };
-
-                  integrators.put(request.canister, new_integrator);
-
-                  //  Add Integration
-                  let new_access_code = await Helpers.generateKey();
-                  let new_integration = {
-                    canister = request.canister;
-                    uid = request.uid;
-                    hashed_access_code = Helpers.hashSecret(new_access_code);
-                    user = null;
-                    last_access_key_change = Time.now();
-                  };
-
-                  integrations.put(tag_identifier, new_integration);
-
-                  //  Add Validation
-                  let new_validation_identifier = Helpers.getValidationIdentifier(tag_identifier, request.canister);
-                  validations.put(new_validation_identifier, tag_identifier);
-
-
-                  //  Prepare Result
-                  let result = {
-                    name = integrator.name;
-                    canister = request.canister;
-                    image = integrator.image;
-                    description = integrator.description;
-                    url = integrator.url;
-                    validation = new_validation_identifier;
-                    access_code = new_access_code;
-                  };
-
-                  return #Ok(result);
-                };
-              };
-            };
-
-            case _ {
-              return #Err(#TagNotFound);
-            };
-          };
-        };
-
-        case _ {
-          return #Err(#IntegratorNotFound);
-        };
-      };
-  };
-
-  //  Get Integration Results
-  private func _getIntegrationResults(
-    uid : T.TagUid, 
-    salt : T.AESKey, 
-    tagIdentifiers : [T.TagIdentifier]
-    ) : [T.IntegrationResult] {
-      let result = Buffer.Buffer<T.IntegrationResult>(integrators.size());
-      for ((canister, integrator) in integrators.entries()) {
-        let tag_identifier = Helpers.getTagIdentifier(uid, canister, salt);
-        var new_integrated = false;
-
-        switch (Array.find(tagIdentifiers, func (t : Text) : Bool {t == tag_identifier})) {
-          case (?value) {
-            new_integrated := true;
-          };
-
-          case _ {};
-        };
-
-        let integration_result = {
-          integrated = new_integrated;
-          name = integrator.name;
-          image = integrator.image;
-          description = integrator.description;
-          canister = canister;
-          url = integrator.url;
-        };
-
-        result.add(integration_result);
-      };
-
-      return Buffer.toArray(result);
+    return Array.freeze(exportData);
   };
 
   //  ----------- Boolean helper functions
@@ -601,40 +203,12 @@ shared actor class SDM() = this {
     return Helpers.isCanisterPrincipal(caller);
   };
 
-  private func _isOwner(
-    caller : Principal, 
-    uid : T.TagUid
-    ) : Bool {
-
-      switch (tags.get(uid)) {
-        case (?tag) {
-          return tag.owner == caller;
-        };
-
-        case _ {
-          return false;
-        };
-      };
-  };
-
-  private func _isIntegrator(caller : Principal) : Bool {
-    return Option.isSome(integrators.get(caller));
-  };
-
-
-
   //  ----------- System functions
   system func preupgrade() {
     tagsEntries := Iter.toArray(tags.entries());
-    integratorsEntries := Iter.toArray(integrators.entries());
-    integrationsEntries := Iter.toArray(integrations.entries());
-    validationsEntries := Iter.toArray(validations.entries());
   };
 
   system func postupgrade() {
     tagsEntries := [];
-    integratorsEntries := [];
-    integrationsEntries := [];
-    validationsEntries := [];
   };
 };
