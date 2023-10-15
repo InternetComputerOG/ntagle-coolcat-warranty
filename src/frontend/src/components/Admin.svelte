@@ -7,8 +7,12 @@
   let uid = "00000000000000";
   var key = "38513c477c59cf1e9181b4a9bb139413";
   let CMACs = "";
-  let urlTemplate = "fcf33-hiaaa-aaaak-qcmoq-cai.icp0.io/activate/tag?m=00000000000000x000000x0000000000000000";
+  let urlTemplate = "fcf33-hiaaa-aaaak-qcmoq-cai.icp0.io/activate/00000000000000x000000x0000000000000000";
   let coolerIds = "";
+
+  let scanUID = "";
+  let scanCTR = "";
+  let scanCMAC = "";
 
   // 20,000 counts
   const counts = [
@@ -5058,12 +5062,13 @@
     console.log("Completed Register Tag...");
   };
 
-  async function map() {
+  async function map(rawCoolerIds) {
     console.log("Starting Uploading Cooler ID Mappings...");
-    coolerIds = document.getElementById("coolers").innerHTML.split(" ");
+    // coolerIds = document.getElementById("coolers").innerHTML
+    let coolerData = rawCoolerIds.split(" ");
 
     console.log(coolerData);
-    let result = await $auth.actor.importMappings(coolerIds);
+    let result = await $auth.actor.importMappings(coolerData);
     console.log(result);
     console.log("Completed Uploading Cooler ID Mappings.");
   };
@@ -5074,6 +5079,19 @@
     console.log(result);
     document.getElementById("mappingOutput").innerHTML = result.toString();
     console.log("Completed Export Cooler ID Mappings.");
+  };
+
+  async function sentScan(uid, ctr, cmac) {
+    console.log("Starting test scan...");
+
+    let scan_param = {
+      uid: uid,
+      ctr: parseInt(ctr, 16),
+      cmac: cmac
+    };
+    let result = await $auth.actor.scan(scan_param);
+    console.log(result);
+    console.log("Completed test scan.");
   };
 
   function copyKey() {
@@ -5110,12 +5128,21 @@
 </div>
 
 <h2>Upload Mappings</h2>
-<button on:click={map}>Map Cooler IDs</button>
-<textarea id="coolers" name="coolers" rows="50" cols="50"></textarea>
+<button on:click={map(coolerIds)}>Map Cooler IDs</button>
+<textarea id="coolers" name="coolers" rows="50" cols="50" bind:value={coolerIds}></textarea>
 
 <h2>Verify Mappings</h2>
 <button on:click={pullMap}>Verify Cooler ID Mappings</button>
 <div id="mappingOutput"></div>
+
+<h2>Verify Scan</h2>
+uid: <br/>
+<input bind:value={scanUID}><br/>
+ctr: <br/>
+<input bind:value={scanCTR}><br/>
+cmac: <br/>
+<input bind:value={scanCMAC}><br/>
+<button on:click={sentScan(scanUID, scanCTR, scanCMAC)}>Submit Scan</button>
 
 <style>
   #CMAC-box, #mappingOutput {

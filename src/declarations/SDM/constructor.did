@@ -1,64 +1,6 @@
-type ValidationResult = 
- variant {
-   Err: ValidationError;
-   Ok: ValidationResponse;
- };
-type ValidationResponse = 
- record {
-   current_user: principal;
-   last_access_key_change: Time;
-   last_ownership_change: Time;
-   previous_user: opt principal;
-   tag: TagIdentifier;
- };
-type ValidationRequest = 
- record {
-   access_code: AESKey;
-   user: principal;
-   validation: ValidationIdentifier;
- };
-type ValidationIdentifier = text;
-type ValidationError = 
- variant {
-   Expired;
-   IntegrationNotFound;
-   Invalid;
-   NotAuthorized;
-   TagNotFound;
-   ValidationNotFound;
- };
-type UnlockResult = 
- variant {
-   Err: UnlockError;
-   Ok: UnlockResponse;
- };
-type UnlockResponse = record {transfer_code: AESKey;};
-type UnlockError = variant {TagNotFound;};
 type Time = int;
 type TagUid = text;
-type TagInfoResult = 
- variant {
-   Err: TagInfoError;
-   Ok: TagInfoResponse;
- };
-type TagInfoResponse = 
- record {
-   current_user: opt principal;
-   last_access_key_change: Time;
-   last_ownership_change: Time;
- };
-type TagInfoError = 
- variant {
-   IntegrationNotFound;
-   NotAuthorized;
-   TagNotFound;
- };
-type TagIdentifier = text;
-type TagEncodeResult = 
- record {
-   key: AESKey;
-   transfer_code: AESKey;
- };
+type TagEncodeResult = record {key: AESKey;};
 type TagCtr = nat32;
 type ScanResult = 
  variant {
@@ -67,121 +9,36 @@ type ScanResult =
  };
 type ScanResponse = 
  record {
-   integrations: vec IntegrationResult;
-   locked: bool;
-   owner: bool;
-   owner_changed: bool;
+   cooler_id: text;
+   creation_date: Time;
    scans_left: nat32;
-   years_left: nat;
  };
 type ScanError = 
  variant {
-   ExpiredCount;
-   InvalidCMAC;
+   ExpiredCount: text;
+   InvalidCMAC: text;
    TagNotFound;
  };
 type Scan = 
  record {
    cmac: CMAC;
    ctr: TagCtr;
-   transfer_code: AESKey;
    uid: TagUid;
  };
 type SDM = 
  service {
-   importCMACs: (TagUid, vec Hex) -> (ImportCMACResult);
-   integratorRegistry: () -> (vec record {
-                                    principal;
-                                    Integrator;
-                                  });
-   isAdmin: () -> (bool);
-   newIntegration: (NewIntegrationRequest) -> (NewIntegrationResult);
-   registerIntegrator: (NewIntegrator) -> () oneway;
-   registerTag: (TagUid) -> (TagEncodeResult);
-   requestAccess: (AccessRequest) -> (AccessResult);
+   exportMappings: () -> (vec Mapping);
+   importMappings: (vec text) -> (ImportMappingsResult);
+   registerTag: (TagUid, vec Hex) -> (TagEncodeResult);
    scan: (Scan) -> (ScanResult);
-   tagInfo: (TagIdentifier) -> (TagInfoResult);
-   testHash: (text) -> (Hex);
-   unlock: (TagUid) -> (UnlockResult);
-   validateAccess: (ValidationRequest) -> (ValidationResult);
  };
-type NewIntegrator = 
+type Mapping = 
  record {
-   description: text;
-   image: text;
-   name: text;
-   url: text;
- };
-type NewIntegrationResult = 
- variant {
-   Err: NewIntegrationError;
-   Ok: NewIntegrationResponse;
- };
-type NewIntegrationResponse = 
- record {
-   access_code: AESKey;
-   canister: principal;
-   description: text;
-   image: text;
-   name: text;
-   url: text;
-   validation: ValidationIdentifier;
- };
-type NewIntegrationRequest = 
- record {
-   canister: principal;
+   cooler_id: text;
    uid: TagUid;
  };
-type NewIntegrationError = 
- variant {
-   IntegrationAlreadyExists;
-   IntegratorNotFound;
-   NotCanisterPrincipal;
-   TagNotFound;
- };
-type Integrator = 
- record {
-   description: text;
-   image: text;
-   name: text;
-   tags: vec TagIdentifier;
-   url: text;
- };
-type IntegrationResult = 
- record {
-   canister: principal;
-   description: text;
-   image: text;
-   integrated: bool;
-   name: text;
-   url: text;
- };
-type ImportCMACResult = 
- variant {
-   Err;
-   Ok;
- };
+type ImportMappingsResult = variant {Ok;};
 type Hex = text;
 type CMAC = text;
-type AccessResult = 
- variant {
-   Err: AccessError;
-   Ok: AccessResponse;
- };
-type AccessResponse = 
- record {
-   access_code: AESKey;
-   validation: ValidationIdentifier;
- };
-type AccessRequest = 
- record {
-   canister: principal;
-   uid: TagUid;
- };
-type AccessError = 
- variant {
-   IntegrationNotFound;
-   SaltNotFound;
- };
 type AESKey = text;
 service : () -> SDM

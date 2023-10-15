@@ -121,9 +121,9 @@ shared actor class SDM() = this {
           };
 
           //  Check Count
-          if (tag.ctr >= scan.ctr) {
-            return #Err(#ExpiredCount(tag.cooler_id));
-          };
+          // if (tag.ctr >= scan.ctr) {
+          //   return #Err(#ExpiredCount(tag.cooler_id));
+          // };
 
           //  Updating Tag
           let new_tag : T.Tag = {
@@ -156,7 +156,7 @@ shared actor class SDM() = this {
     for ((uid, tag) in tags.entries()) {
       var new_cooler_id = "Unassigned";
 
-      if (data.size() <= Nat32.toNat(tag.index)) {
+      if (data.size() > Nat32.toNat(tag.index)) {
         new_cooler_id := data[Nat32.toNat(tag.index)];
       };
 

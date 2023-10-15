@@ -25,13 +25,6 @@ type Scan =
    ctr: TagCtr;
    uid: TagUid;
  };
-type SDM = 
- service {
-   exportMappings: () -> (vec Mapping);
-   importMappings: (vec text) -> (ImportMappingsResult);
-   registerTag: (TagUid, vec Hex) -> (TagEncodeResult);
-   scan: (Scan) -> (ScanResult);
- };
 type Mapping = 
  record {
    cooler_id: text;
@@ -41,4 +34,9 @@ type ImportMappingsResult = variant {Ok;};
 type Hex = text;
 type CMAC = text;
 type AESKey = text;
-service : () -> SDM
+service : {
+  exportMappings: () -> (vec Mapping);
+  importMappings: (vec text) -> (ImportMappingsResult);
+  registerTag: (TagUid, vec Hex) -> (TagEncodeResult);
+  scan: (Scan) -> (ScanResult);
+}
