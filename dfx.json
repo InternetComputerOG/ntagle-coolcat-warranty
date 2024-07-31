@@ -24,7 +24,7 @@
     },
     "bindings": ["js", "ts", "did", "mo"]
   },
-  "dfx": "0.14.3",
+  "dfx": "0.22.0",
   "networks": {
     "local": {
       "bind": "127.0.0.1:8000",

@@ -1,44 +1,28 @@
-type Time = int;
-type TagUid = text;
-type TagEncodeResult = record {key: AESKey;};
-type TagCtr = nat32;
-type ScanResult = 
- variant {
-   Err: ScanError;
-   Ok: ScanResponse;
- };
-type ScanResponse = 
- record {
-   cooler_id: text;
-   creation_date: Time;
-   scans_left: nat32;
- };
-type ScanError = 
- variant {
-   ExpiredCount: text;
-   InvalidCMAC: text;
-   TagNotFound;
- };
-type Scan = 
- record {
-   cmac: CMAC;
-   ctr: TagCtr;
-   uid: TagUid;
- };
-type SDM = 
- service {
-   exportMappings: () -> (vec Mapping);
-   importMappings: (vec text) -> (ImportMappingsResult);
-   registerTag: (TagUid, vec Hex) -> (TagEncodeResult);
-   scan: (Scan) -> (ScanResult);
- };
-type Mapping = 
- record {
-   cooler_id: text;
-   uid: TagUid;
- };
-type ImportMappingsResult = variant {Ok;};
-type Hex = text;
-type CMAC = text;
 type AESKey = text;
+type CMAC = text;
+type Hex = text;
+type ImportMappingsResult = variant { Ok };
+type Mapping = record { uid : TagUid; cooler_id : text };
+type SDM = service {
+  exportMappings : () -> (vec Mapping);
+  importMappings : (vec text) -> (ImportMappingsResult);
+  registerTag : (TagUid, vec Hex) -> (TagEncodeResult);
+  scan : (Scan) -> (ScanResult);
+};
+type Scan = record { ctr : TagCtr; uid : TagUid; cmac : CMAC };
+type ScanError = variant {
+  TagNotFound;
+  ExpiredCount : text;
+  InvalidCMAC : text;
+};
+type ScanResponse = record {
+  cooler_id : text;
+  scans_left : nat32;
+  creation_date : Time;
+};
+type ScanResult = variant { Ok : ScanResponse; Err : ScanError };
+type TagCtr = nat32;
+type TagEncodeResult = record { key : AESKey };
+type TagUid = text;
+type Time = int;
 service : () -> SDM

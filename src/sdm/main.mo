@@ -54,7 +54,7 @@ shared actor class SDM() = this {
     uid : T.TagUid, 
     data : [Hex.Hex]
     ) : async T.TagEncodeResult {
-      // assert _isAdmin(caller);
+      // assert false;
       assert not _tag_exists(uid);
 
       await _registerTag(uid, data);
@@ -68,13 +68,13 @@ shared actor class SDM() = this {
 
   //  Mappings
   public shared({ caller }) func importMappings(data : [Text]) : async T.ImportMappingsResult {
-    // assert _isAdmin(caller);
+    // assert false;
     _importMappings(data);
   };
 
   //  Tag Info
   public shared({ caller }) func exportMappings() : async [T.Mapping] {
-    // assert _isAdmin(caller);
+    // assert false;
     _exportMappings();
   };
 
@@ -120,7 +120,7 @@ shared actor class SDM() = this {
             return #Err(#InvalidCMAC(tag.cooler_id));
           };
 
-          //  Check Count
+          // Check Count
           // if (tag.ctr >= scan.ctr) {
           //   return #Err(#ExpiredCount(tag.cooler_id));
           // };

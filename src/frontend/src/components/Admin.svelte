@@ -4,7 +4,7 @@
   import { encode, decode } from "@stablelib/hex";
   import { auth, defaultAuth } from "../store/auth";
 
-  let uid = "00000000000000";
+  let fullUid = "0x00000000000000";
   var key = "38513c477c59cf1e9181b4a9bb139413";
   let CMACs = "";
   let urlTemplate = "fcf33-hiaaa-aaaak-qcmoq-cai.icp0.io/activate/00000000000000x000000x0000000000000000";
@@ -5019,8 +5019,9 @@
     '881300'
   ];
 
-  function SDMMAC(count, uid, mKey) {
+  function SDMMAC(count, fullUid, mKey) {
     var cmac = new CMAC(new AES(decode(mKey), true));
+    var uid = fullUid.slice(2);
 
     var sv1 = "3CC300010080" + uid + count;
     cmac.update(decode(sv1));
@@ -5056,7 +5057,7 @@
     let data = CMACs.split(",");
     console.log(data);
 
-    let result = await $auth.actor.registerTag(rawUid, data);
+    let result = await $auth.actor.registerTag(rawUid.slice(2), data);
     console.log(result);
     key = result.key;
     console.log("Completed Register Tag...");
@@ -5077,7 +5078,7 @@
     console.log("Starting Export Cooler ID Mappings...");
     let result = await $auth.actor.exportMappings();
     console.log(result);
-    document.getElementById("mappingOutput").innerHTML = result.toString();
+    document.getElementById("mappingOutput").innerHTML = JSON.stringify(result);
     console.log("Completed Export Cooler ID Mappings.");
   };
 
@@ -5107,23 +5108,24 @@
 
 <h2>Encoding</h2>
 <h3>Step 1: provide UID</h3>
-<input bind:value={uid}>
-<button on:click={register(uid)}>Register UID</button>
+<label for="uid">uid</label><br>
+<input id="UID" name="uid" bind:value={fullUid}>
+<button on:click={register(fullUid)}>Register UID</button>
 
 <h3>Step 2: Copy Data</h3>
 <h5>Key</h5>
 <button on:click={copyKey}>Copy Key</button>
 <h5>URL</h5>
 <button on:click={copyUrl}>Copy URL Template</button>
-<p>UID: 58</p><br />
-<p>CTR: 73</p><br />
-<p>CMAC: 80</p><br />
+<p>UID: 52</p><br />
+<p>CTR: 67</p><br />
+<p>CMAC: 74</p><br />
 
 <!-- <h3>Step 3: upload CMACs</h3>
 <button on:click={upload(CMACs, uid)}>Upload</button> -->
 <div id="CMAC-box">
   {#each counts as count}
-    {SDMMAC(count, uid, key)},
+    {SDMMAC(count, fullUid, key)},
   {/each}
 </div>
 

@@ -4,7 +4,7 @@ import { Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory } from './SDM.did.js';
 export { idlFactory } from './SDM.did.js';
 // CANISTER_ID is replaced by webpack based on node environment
-export const canisterId = process.env.SDM_CANISTER_ID;
+export const canisterId = process.env.CANISTER_ID_SDM;
 
 /**
  * @deprecated since dfx 0.11.1
